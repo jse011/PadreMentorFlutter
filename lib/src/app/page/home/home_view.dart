@@ -11,9 +11,9 @@ import 'package:ss_crmeducativo/src/app/widgets/bottom_navigation.dart';
 import 'package:ss_crmeducativo/src/app/widgets/splash.dart';
 import 'package:ss_crmeducativo/src/data/repositories/moor/moor_configuracion_repository.dart';
 import 'package:ss_crmeducativo/src/device/repositories/http/device_http_datos_repository.dart';
-
 import '../../routers.dart';
 import 'home_controller.dart';
+
 
 class HomeView extends View{
   static const TAG = "HomePage";

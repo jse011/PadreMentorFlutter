@@ -58,6 +58,8 @@ dependencies:
   html: ^0.14.0+4
   scroll_to_index: ^1.0.6
 
+  fancy_shimmer_image: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
