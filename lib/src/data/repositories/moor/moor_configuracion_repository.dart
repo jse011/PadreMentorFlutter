@@ -1,7 +1,12 @@
 import 'package:moor_flutter/moor_flutter.dart';
 import 'package:ss_crmeducativo/src/data/helpers/serelizable/rest_api_response.dart';
+import 'package:ss_crmeducativo/src/data/repositories/moor/model/aula.dart';
+import 'package:ss_crmeducativo/src/data/repositories/moor/model/carga_cursos.dart';
 import 'package:ss_crmeducativo/src/data/repositories/moor/tools/serializable_convert.dart';
+import 'package:ss_crmeducativo/src/domain/entities/anio_acemico_ui.dart';
+import 'package:ss_crmeducativo/src/domain/entities/cursos_ui.dart';
 import 'package:ss_crmeducativo/src/domain/entities/login_ui.dart';
+import 'package:ss_crmeducativo/src/domain/entities/programa_educativo_ui.dart';
 import 'package:ss_crmeducativo/src/domain/entities/usuario_ui.dart';
 import 'package:ss_crmeducativo/src/domain/repositories/configuracion_repository.dart';
 import 'package:ss_crmeducativo/src/domain/tools/app_tools.dart';
@@ -9,6 +14,10 @@ import 'package:ss_crmeducativo/src/domain/tools/app_tools.dart';
 import 'database/app_database.dart';
 
 class MoorConfiguracionRepository extends ConfiguracionRepository{
+
+  static const int ANIO_ACADEMICO_MATRICULA = 192, ANIO_ACADEMICO_ACTIVO = 193, ANIO_ACADEMICO_CERRADO = 194, ANIO_ACADEMICO_CREADO = 195, ANIO_ACADEMICO_ELIMINADO = 196;
+  static const int SILABO_ESTADO_CREADO = 243, SILABO_ESTADO_AUTORIZADO = 244, SILABO_ESTADO_PROCESO = 245, SILABO_ESTADO_PUBLICADO = 246, SILABO_ESTADO_ELIMINADO = 397;
+
   @override
   Future<bool> validarUsuario() async{
     AppDataBase SQL = AppDataBase();
@@ -60,6 +69,28 @@ class MoorConfiguracionRepository extends ConfiguracionRepository{
     try{
       SessionUserData sessionUserData =  await SQL.selectSingle(SQL.sessionUser).getSingle();
       return sessionUserData?.urlServerLocal??"";
+    }catch(e){
+      throw Exception(e);
+    }
+  }
+
+  @override
+  Future<int> getSessionAnioAcademicoId()async {
+    AppDataBase SQL = AppDataBase();
+    try{
+      SessionUserData sessionUserData =  await SQL.selectSingle(SQL.sessionUser).getSingle();
+      return sessionUserData?.anioAcademicoId??0;
+    }catch(e){
+      throw Exception(e);
+    }
+  }
+
+  @override
+  Future<int> getSessionProgramaEducativoId() async{
+    AppDataBase SQL = AppDataBase();
+    try{
+      SessionUserData sessionUserData =  await SQL.selectSingle(SQL.sessionUser).getSingle();
+      return sessionUserData?.programaEducativoId??0;
     }catch(e){
       throw Exception(e);
     }
@@ -244,12 +275,12 @@ class MoorConfiguracionRepository extends ConfiguracionRepository{
   }
 
   @override
-  Future<void> updateUsuarioSuccessData(int usuarioId) async {
+  Future<void> updateUsuarioSuccessData(int usuarioId, int anioAcademicoId) async {
     AppDataBase SQL = AppDataBase();
     try{
       SessionUserData sessionUserData = await(SQL.selectSingle(SQL.sessionUser).getSingle());
       if(sessionUserData!=null){
-        await SQL.update(SQL.sessionUser).replace(sessionUserData.copyWith(complete: true));
+        await SQL.update(SQL.sessionUser).replace(sessionUserData.copyWith(complete: true, anioAcademicoId: anioAcademicoId));
       }
     }catch(e){
       throw Exception(e);
@@ -440,6 +471,257 @@ class MoorConfiguracionRepository extends ConfiguracionRepository{
 
 
   }
+
+  @override
+  Future<List<AnioAcademicoUi>> getAnioAcademicoList(int usuarioId) async {
+    AppDataBase SQL = AppDataBase();
+    List<AnioAcademicoUi> anioAcademicoUis =[];
+
+    List<UsuarioRolGeoreferenciaData> usuarioRolGeoreferenciaList = await (SQL.select(SQL.usuarioRolGeoreferencia)..where((tbl) => tbl.usuarioId.equals(usuarioId))).get();
+
+    List<int> gereferenciaIdList = [];
+    for (UsuarioRolGeoreferenciaData usuarioRolGeoreferencia in usuarioRolGeoreferenciaList){
+      gereferenciaIdList.add(usuarioRolGeoreferencia.geoReferenciaId);
+    }
+
+    List<AnioAcademicoData> anioAcademicoList = await (SQL.select(SQL.anioAcademico)..where((tbl) => tbl.georeferenciaId.isIn(gereferenciaIdList))).get();
+    anioAcademicoList.sort((o2, o1) {
+
+      int sComp =  AppTools.convertDateTimePtBR(o2?.fechaFin, null)?.compareTo(AppTools.convertDateTimePtBR(o1?.fechaFin, null));
+      if (sComp != 0) {
+        return sComp;
+      }
+
+      int x1 = o1.georeferenciaId;
+      int x2 = o2.georeferenciaId;
+      return x1.compareTo(x2);
+
+    });
+
+    int anioAcademicoId = await getSessionAnioAcademicoId();
+
+    for (AnioAcademicoData anioAcademico in anioAcademicoList){
+      AnioAcademicoUi anioAcademicoUi = new AnioAcademicoUi();
+      anioAcademicoUi.anioAcademicoId = anioAcademico.idAnioAcademico;
+      anioAcademicoUi.nombre = anioAcademico.nombre;
+      anioAcademicoUi.georeferenciaId = anioAcademico.georeferenciaId;
+      if(anioAcademico.estadoId== ANIO_ACADEMICO_ACTIVO){
+        anioAcademicoUi.vigente = true;
+      }
+      anioAcademicoUi.toogle = anioAcademico.idAnioAcademico == anioAcademicoId;
+      anioAcademicoUis.add(anioAcademicoUi);
+    }
+
+    return anioAcademicoUis;
+  }
+
+  @override
+  Future<void> updateSessionAnioAcademicoId(int anioAcademicoId) async {
+    AppDataBase SQL = AppDataBase();
+    try{
+      SessionUserData sessionUserData = await(SQL.selectSingle(SQL.sessionUser).getSingle());
+      if(sessionUserData!=null){
+        await SQL.update(SQL.sessionUser).replace(sessionUserData.copyWith(anioAcademicoId: anioAcademicoId));
+      }
+    }catch(e){
+      throw Exception(e);
+    }
+  }
+
+  @override
+  Future<List<ProgramaEducativoUi>> getListProgramaEducativo(int empleadoId, int anioAcademicoId) async{
+    AppDataBase SQL = AppDataBase();
+    List<ProgramaEducativoUi> programaEduactivosUIs = [];
+    List<CargaCursoData> cargaCursosList = [];
+
+    var query = SQL.select(SQL.cargaCurso).join([
+      innerJoin(SQL.cargaAcademica, SQL.cargaAcademica.cargaAcademicaId.equalsExp(SQL.cargaCurso.cargaAcademicaId)),
+      innerJoin(SQL.anioAcademico, SQL.anioAcademico.idAnioAcademico.equalsExp(SQL.cargaAcademica.idAnioAcademico)),
+    ]);
+
+    query.where(SQL.cargaCurso.empleadoId.equals(empleadoId));
+    query.where(SQL.cargaCurso.complejo.equals(0));
+    query.where(SQL.anioAcademico.idAnioAcademico.equals(anioAcademicoId));
+
+    for(var row in await query.get()){
+      cargaCursosList.add(row.readTable(SQL.cargaCurso));
+    }
+
+    var queryComplejo = SQL.select(SQL.cargaCurso).join([
+      innerJoin(SQL.cargaCursoDocente, SQL.cargaCursoDocente.cargaCursoId.equalsExp(SQL.cargaCurso.cargaCursoId)),
+      innerJoin(SQL.cargaCursoDocenteDet, SQL.cargaCursoDocente.cargaCursoDocenteId.equalsExp(SQL.cargaCursoDocenteDet.cargaCursoDocenteId)),
+      innerJoin(SQL.cargaAcademica, SQL.cargaAcademica.cargaAcademicaId.equalsExp(SQL.cargaCurso.cargaAcademicaId)),
+      innerJoin(SQL.anioAcademico, SQL.anioAcademico.idAnioAcademico.equalsExp(SQL.cargaAcademica.idAnioAcademico)),
+    ]);
+
+    queryComplejo.where(SQL.cargaCursoDocente.docenteId.equals(empleadoId));
+    queryComplejo.where(SQL.cargaCurso.complejo.equals(1));
+    queryComplejo.where(SQL.anioAcademico.idAnioAcademico.equals(anioAcademicoId));
+
+    for(var row in await queryComplejo.get()){
+      cargaCursosList.add(row.readTable(SQL.cargaCurso));
+    }
+
+    List<int> planCursoIdList = [];
+    for(CargaCursoData itemCargaCursos in cargaCursosList){
+      planCursoIdList.add(itemCargaCursos.planCursoId);
+    }
+
+    var queryProgramaEdu = SQL.select(SQL.programasEducativo).join([
+      innerJoin(SQL.planEstudio, SQL.programasEducativo.programaEduId.equalsExp(SQL.planEstudio.programaEduId)),
+      innerJoin(SQL.planCursos, SQL.planEstudio.planEstudiosId.equalsExp(SQL.planCursos.planEstudiosId)),
+      innerJoin(SQL.nivelAcademico, SQL.programasEducativo.nivelAcadId.equalsExp(SQL.nivelAcademico.nivelAcadId))
+    ]);
+    queryProgramaEdu.where(SQL.planCursos.planCursoId.isIn(planCursoIdList));
+    queryProgramaEdu.where(SQL.programasEducativo.estadoId.equals(37));
+    queryProgramaEdu.groupBy([SQL.programasEducativo.programaEduId]);
+    for(var row in await queryProgramaEdu.get()){
+      ProgramasEducativoData programasEducativo = row.readTable(SQL.programasEducativo);
+      NivelAcademicoData nivelAcademicoData = row.readTable(SQL.nivelAcademico);
+      ProgramaEducativoUi programaEduactivosUI = new ProgramaEducativoUi();
+      programaEduactivosUI.idPrograma = programasEducativo.programaEduId;
+      programaEduactivosUI.nombrePrograma = programasEducativo.nombre;
+      programaEduactivosUI.seleccionado = programasEducativo.toogle;
+      programaEduactivosUI.nivelAcademico = nivelAcademicoData.nombre;
+      programaEduactivosUIs.add(programaEduactivosUI);
+    }
+
+     return programaEduactivosUIs;
+  }
+
+  @override
+  Future<int> getSessionEmpleadoId() async {
+    AppDataBase SQL = AppDataBase();
+    try{
+      int empleadoId = 0;
+      var query = SQL.selectSingle(SQL.empleado).join([
+        innerJoin(SQL.usuario, SQL.usuario.personaId.equalsExp(SQL.empleado.personaId))
+      ]);
+      query.where(SQL.usuario.usuarioId.equals(await getSessionUsuarioId()));
+      var row = await query.getSingle();
+
+
+      if(row != null){
+        EmpleadoData empleado = row.readTable(SQL.empleado);
+        empleadoId = empleado.empleadoId;
+      }
+      return empleadoId;
+    }catch(e){
+      throw Exception(e);
+    }
+  }
+
+  @override
+  Future<List<CursosUi>> getListCursos(int empleadoId, int anioAcademicoId, int programaEducativoId) async{
+    AppDataBase SQL = AppDataBase();
+    List<CursosUi> cursosUiList = [];
+
+    List<int> cargaCursosIdList = [];
+
+    var query = SQL.select(SQL.cargaCurso).join([
+      innerJoin(SQL.cargaAcademica, SQL.cargaAcademica.cargaAcademicaId.equalsExp(SQL.cargaCurso.cargaAcademicaId)),
+      innerJoin(SQL.anioAcademico, SQL.anioAcademico.idAnioAcademico.equalsExp(SQL.cargaAcademica.idAnioAcademico)),
+      innerJoin(SQL.planCursos, SQL.planCursos.planCursoId.equalsExp(SQL.cargaCurso.planCursoId)),
+      innerJoin(SQL.planEstudio, SQL.planEstudio.planEstudiosId.equalsExp(SQL.planCursos.planEstudiosId)),
+      innerJoin(SQL.programasEducativo, SQL.programasEducativo.programaEduId.equalsExp(SQL.planEstudio.programaEduId))
+    ]);
+
+    query.where(SQL.cargaCurso.empleadoId.equals(empleadoId));
+    query.where(SQL.cargaCurso.complejo.equals(0));
+    query.where(SQL.anioAcademico.idAnioAcademico.equals(anioAcademicoId));
+    query.where(SQL.programasEducativo.programaEduId.equals(programaEducativoId));
+
+    for(var row in await query.get()){
+      cargaCursosIdList.add(row.readTable(SQL.cargaCurso).cargaCursoId);
+    }
+
+    var queryComplejo = SQL.select(SQL.cargaCurso).join([
+      innerJoin(SQL.cargaCursoDocente, SQL.cargaCursoDocente.cargaCursoId.equalsExp(SQL.cargaCurso.cargaCursoId)),
+      innerJoin(SQL.cargaCursoDocenteDet, SQL.cargaCursoDocente.cargaCursoDocenteId.equalsExp(SQL.cargaCursoDocenteDet.cargaCursoDocenteId)),
+      innerJoin(SQL.cargaAcademica, SQL.cargaAcademica.cargaAcademicaId.equalsExp(SQL.cargaCurso.cargaAcademicaId)),
+      innerJoin(SQL.anioAcademico, SQL.anioAcademico.idAnioAcademico.equalsExp(SQL.cargaAcademica.idAnioAcademico)),
+      innerJoin(SQL.planCursos, SQL.planCursos.planCursoId.equalsExp(SQL.cargaCurso.planCursoId)),
+      innerJoin(SQL.planEstudio, SQL.planEstudio.planEstudiosId.equalsExp(SQL.planCursos.planEstudiosId)),
+      innerJoin(SQL.programasEducativo, SQL.programasEducativo.programaEduId.equalsExp(SQL.planEstudio.programaEduId))
+    ]);
+
+    queryComplejo.where(SQL.cargaCursoDocente.docenteId.equals(empleadoId));
+    queryComplejo.where(SQL.cargaCurso.complejo.equals(1));
+    queryComplejo.where(SQL.anioAcademico.idAnioAcademico.equals(anioAcademicoId));
+    query.where(SQL.programasEducativo.programaEduId.equals(programaEducativoId));
+
+    for(var row in await queryComplejo.get()){
+      cargaCursosIdList.add(row.readTable(SQL.cargaCurso).cargaCursoId);
+    }
+
+
+    var queryCursos = SQL.select(SQL.cargaCurso).join([
+      innerJoin(SQL.planCursos, SQL.planCursos.planCursoId.equalsExp(SQL.cargaCurso.planCursoId)),
+      innerJoin(SQL.cursos, SQL.planCursos.cursoId.equalsExp(SQL.cursos.cursoId)),
+      innerJoin(SQL.planEstudio, SQL.planCursos.planEstudiosId.equalsExp(SQL.planEstudio.planEstudiosId)),
+      innerJoin(SQL.cargaAcademica, SQL.cargaCurso.cargaAcademicaId.equalsExp(SQL.cargaAcademica.cargaAcademicaId)),
+      innerJoin(SQL.seccion, SQL.seccion.seccionId.equalsExp(SQL.cargaAcademica.seccionId)),
+      innerJoin(SQL.periodos, SQL.periodos.periodoId.equalsExp(SQL.cargaAcademica.periodoId)),
+      innerJoin(SQL.aula, SQL.aula.aulaId.equalsExp(SQL.cargaAcademica.aulaId)),
+      leftOuterJoin(SQL.silaboEvento, SQL.silaboEvento.cargaCursoId.equalsExp(SQL.cargaCurso.cargaCursoId)),
+      leftOuterJoin(SQL.parametrosDisenio, SQL.parametrosDisenio.parametroDisenioId.equalsExp(SQL.silaboEvento.parametroDisenioId))
+    ]);
+
+
+    ParametrosDisenioData defaultParametrosDisenioData = await (SQL.selectSingle(SQL.parametrosDisenio)..where((tbl) => tbl.nombre.equals("default"))).getSingle();
+
+    for(var row in await queryCursos.get()){
+      CursosUi cursosUi = CursosUi();
+      CargaCursoData cargaCursoData = row.readTable(SQL.cargaCurso);
+      CargaAcademicaData cargaAcademicaData = row.readTable(SQL.cargaAcademica);
+      Curso curso = row.readTable(SQL.cursos);
+      Periodo periodo = row.readTable(SQL.periodos);
+      SeccionData seccionData = row.readTable(SQL.seccion);
+      AulaData aula = row.readTable(SQL.aula);
+      SilaboEventoData silaboEventoData = row.readTable(SQL.silaboEvento);
+      ParametrosDisenioData parametrosDisenioData = row.readTable(SQL.parametrosDisenio);
+
+      cursosUi.cargaCursoId = cargaCursoData.cargaCursoId;
+      cursosUi.cargaAcademicaId = cargaAcademicaData.cargaAcademicaId;
+      cursosUi.nombreCurso = curso.nombre;
+      cursosUi.gradoSeccion = periodo.aliasPeriodo + " " + seccionData.nombre;
+      cursosUi.nroSalon = aula.numero;
+      cursosUi.silaboEventoId = silaboEventoData!=null?silaboEventoData.silaboEventoId:0;
+      cursosUi.color1 = parametrosDisenioData!=null?parametrosDisenioData.color1 :
+                        defaultParametrosDisenioData != null?defaultParametrosDisenioData.color1 : "";
+      cursosUi.color2 = parametrosDisenioData!=null?parametrosDisenioData.color2 :
+                        defaultParametrosDisenioData != null?defaultParametrosDisenioData.color2 : "";
+      cursosUi.color3 = parametrosDisenioData!=null?parametrosDisenioData.color3 :
+                        defaultParametrosDisenioData != null?defaultParametrosDisenioData.color3 : "";
+      cursosUi.banner = parametrosDisenioData!=null?parametrosDisenioData.path :
+                              defaultParametrosDisenioData != null?defaultParametrosDisenioData.path : "";
+
+      if(silaboEventoData!=null){
+        switch(silaboEventoData.estadoId){
+          case SILABO_ESTADO_CREADO:
+            cursosUi.estadoSilabo = EstadoSilabo.NO_AUTORIZADO;
+            break;
+          default:
+            cursosUi.estadoSilabo = EstadoSilabo.AUTORIZADO;
+            break;
+        }
+      }else{
+        cursosUi.estadoSilabo = EstadoSilabo.SIN_SILABO;
+      }
+      cursosUi.cantidadPersonas = 0;
+      cursosUi.tutor = cargaAcademicaData.idEmpleadoTutor == empleadoId;
+      cursosUiList.add(cursosUi);
+    }
+    return cursosUiList;
+  }
+
+
+
+
+
+
+
+
 
 
 

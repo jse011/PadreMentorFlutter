@@ -10,11 +10,13 @@ part of 'app_database.dart';
 class SessionUserData extends DataClass implements Insertable<SessionUserData> {
   final int userId;
   final int anioAcademicoId;
+  final int programaEducativoId;
   final String urlServerLocal;
   final bool complete;
   SessionUserData(
       {@required this.userId,
       this.anioAcademicoId,
+      this.programaEducativoId,
       this.urlServerLocal,
       this.complete});
   factory SessionUserData.fromData(
@@ -29,6 +31,8 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
           intType.mapFromDatabaseResponse(data['${effectivePrefix}user_id']),
       anioAcademicoId: intType
           .mapFromDatabaseResponse(data['${effectivePrefix}anio_academico_id']),
+      programaEducativoId: intType.mapFromDatabaseResponse(
+          data['${effectivePrefix}programa_educativo_id']),
       urlServerLocal: stringType
           .mapFromDatabaseResponse(data['${effectivePrefix}url_server_local']),
       complete:
@@ -43,6 +47,9 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
     }
     if (!nullToAbsent || anioAcademicoId != null) {
       map['anio_academico_id'] = Variable<int>(anioAcademicoId);
+    }
+    if (!nullToAbsent || programaEducativoId != null) {
+      map['programa_educativo_id'] = Variable<int>(programaEducativoId);
     }
     if (!nullToAbsent || urlServerLocal != null) {
       map['url_server_local'] = Variable<String>(urlServerLocal);
@@ -60,6 +67,9 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
       anioAcademicoId: anioAcademicoId == null && nullToAbsent
           ? const Value.absent()
           : Value(anioAcademicoId),
+      programaEducativoId: programaEducativoId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(programaEducativoId),
       urlServerLocal: urlServerLocal == null && nullToAbsent
           ? const Value.absent()
           : Value(urlServerLocal),
@@ -75,6 +85,8 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
     return SessionUserData(
       userId: serializer.fromJson<int>(json['userId']),
       anioAcademicoId: serializer.fromJson<int>(json['anioAcademicoId']),
+      programaEducativoId:
+          serializer.fromJson<int>(json['programaEducativoId']),
       urlServerLocal: serializer.fromJson<String>(json['urlServerLocal']),
       complete: serializer.fromJson<bool>(json['complete']),
     );
@@ -85,6 +97,7 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
     return <String, dynamic>{
       'userId': serializer.toJson<int>(userId),
       'anioAcademicoId': serializer.toJson<int>(anioAcademicoId),
+      'programaEducativoId': serializer.toJson<int>(programaEducativoId),
       'urlServerLocal': serializer.toJson<String>(urlServerLocal),
       'complete': serializer.toJson<bool>(complete),
     };
@@ -93,11 +106,13 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
   SessionUserData copyWith(
           {int userId,
           int anioAcademicoId,
+          int programaEducativoId,
           String urlServerLocal,
           bool complete}) =>
       SessionUserData(
         userId: userId ?? this.userId,
         anioAcademicoId: anioAcademicoId ?? this.anioAcademicoId,
+        programaEducativoId: programaEducativoId ?? this.programaEducativoId,
         urlServerLocal: urlServerLocal ?? this.urlServerLocal,
         complete: complete ?? this.complete,
       );
@@ -106,6 +121,7 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
     return (StringBuffer('SessionUserData(')
           ..write('userId: $userId, ')
           ..write('anioAcademicoId: $anioAcademicoId, ')
+          ..write('programaEducativoId: $programaEducativoId, ')
           ..write('urlServerLocal: $urlServerLocal, ')
           ..write('complete: $complete')
           ..write(')'))
@@ -115,14 +131,17 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
   @override
   int get hashCode => $mrjf($mrjc(
       userId.hashCode,
-      $mrjc(anioAcademicoId.hashCode,
-          $mrjc(urlServerLocal.hashCode, complete.hashCode))));
+      $mrjc(
+          anioAcademicoId.hashCode,
+          $mrjc(programaEducativoId.hashCode,
+              $mrjc(urlServerLocal.hashCode, complete.hashCode)))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
       (other is SessionUserData &&
           other.userId == this.userId &&
           other.anioAcademicoId == this.anioAcademicoId &&
+          other.programaEducativoId == this.programaEducativoId &&
           other.urlServerLocal == this.urlServerLocal &&
           other.complete == this.complete);
 }
@@ -130,29 +149,35 @@ class SessionUserData extends DataClass implements Insertable<SessionUserData> {
 class SessionUserCompanion extends UpdateCompanion<SessionUserData> {
   final Value<int> userId;
   final Value<int> anioAcademicoId;
+  final Value<int> programaEducativoId;
   final Value<String> urlServerLocal;
   final Value<bool> complete;
   const SessionUserCompanion({
     this.userId = const Value.absent(),
     this.anioAcademicoId = const Value.absent(),
+    this.programaEducativoId = const Value.absent(),
     this.urlServerLocal = const Value.absent(),
     this.complete = const Value.absent(),
   });
   SessionUserCompanion.insert({
     this.userId = const Value.absent(),
     this.anioAcademicoId = const Value.absent(),
+    this.programaEducativoId = const Value.absent(),
     this.urlServerLocal = const Value.absent(),
     this.complete = const Value.absent(),
   });
   static Insertable<SessionUserData> custom({
     Expression<int> userId,
     Expression<int> anioAcademicoId,
+    Expression<int> programaEducativoId,
     Expression<String> urlServerLocal,
     Expression<bool> complete,
   }) {
     return RawValuesInsertable({
       if (userId != null) 'user_id': userId,
       if (anioAcademicoId != null) 'anio_academico_id': anioAcademicoId,
+      if (programaEducativoId != null)
+        'programa_educativo_id': programaEducativoId,
       if (urlServerLocal != null) 'url_server_local': urlServerLocal,
       if (complete != null) 'complete': complete,
     });
@@ -161,11 +186,13 @@ class SessionUserCompanion extends UpdateCompanion<SessionUserData> {
   SessionUserCompanion copyWith(
       {Value<int> userId,
       Value<int> anioAcademicoId,
+      Value<int> programaEducativoId,
       Value<String> urlServerLocal,
       Value<bool> complete}) {
     return SessionUserCompanion(
       userId: userId ?? this.userId,
       anioAcademicoId: anioAcademicoId ?? this.anioAcademicoId,
+      programaEducativoId: programaEducativoId ?? this.programaEducativoId,
       urlServerLocal: urlServerLocal ?? this.urlServerLocal,
       complete: complete ?? this.complete,
     );
@@ -179,6 +206,9 @@ class SessionUserCompanion extends UpdateCompanion<SessionUserData> {
     }
     if (anioAcademicoId.present) {
       map['anio_academico_id'] = Variable<int>(anioAcademicoId.value);
+    }
+    if (programaEducativoId.present) {
+      map['programa_educativo_id'] = Variable<int>(programaEducativoId.value);
     }
     if (urlServerLocal.present) {
       map['url_server_local'] = Variable<String>(urlServerLocal.value);
@@ -194,6 +224,7 @@ class SessionUserCompanion extends UpdateCompanion<SessionUserData> {
     return (StringBuffer('SessionUserCompanion(')
           ..write('userId: $userId, ')
           ..write('anioAcademicoId: $anioAcademicoId, ')
+          ..write('programaEducativoId: $programaEducativoId, ')
           ..write('urlServerLocal: $urlServerLocal, ')
           ..write('complete: $complete')
           ..write(')'))
@@ -232,6 +263,20 @@ class $SessionUserTable extends SessionUser
     );
   }
 
+  final VerificationMeta _programaEducativoIdMeta =
+      const VerificationMeta('programaEducativoId');
+  GeneratedIntColumn _programaEducativoId;
+  @override
+  GeneratedIntColumn get programaEducativoId =>
+      _programaEducativoId ??= _constructProgramaEducativoId();
+  GeneratedIntColumn _constructProgramaEducativoId() {
+    return GeneratedIntColumn(
+      'programa_educativo_id',
+      $tableName,
+      true,
+    );
+  }
+
   final VerificationMeta _urlServerLocalMeta =
       const VerificationMeta('urlServerLocal');
   GeneratedTextColumn _urlServerLocal;
@@ -260,7 +305,7 @@ class $SessionUserTable extends SessionUser
 
   @override
   List<GeneratedColumn> get $columns =>
-      [userId, anioAcademicoId, urlServerLocal, complete];
+      [userId, anioAcademicoId, programaEducativoId, urlServerLocal, complete];
   @override
   $SessionUserTable get asDslTable => this;
   @override
@@ -281,6 +326,12 @@ class $SessionUserTable extends SessionUser
           _anioAcademicoIdMeta,
           anioAcademicoId.isAcceptableOrUnknown(
               data['anio_academico_id'], _anioAcademicoIdMeta));
+    }
+    if (data.containsKey('programa_educativo_id')) {
+      context.handle(
+          _programaEducativoIdMeta,
+          programaEducativoId.isAcceptableOrUnknown(
+              data['programa_educativo_id'], _programaEducativoIdMeta));
     }
     if (data.containsKey('url_server_local')) {
       context.handle(

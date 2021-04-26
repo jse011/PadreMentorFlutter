@@ -78,6 +78,9 @@ class AppTheme  {
 
   static const String fontName = 'Roboto';
   static const String fontGotham = 'Gotham';
+  static const String fontTTNormsLigth = 'TT-Norms-Ligth';
+  static const String fontTTNorms = 'TT-Norms';
+  static const String fontTTNormsMedium = 'TT-Norms-Medium';
 
   static const TextTheme textTheme = TextTheme(
     headline4: display1,

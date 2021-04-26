@@ -63,12 +63,12 @@ class Login extends UseCase<LoginResponse,LoginParams>{
           }
 
           bool rolValidado = await datosrepository.validarRol(usuarioId);
-
+          int anioAcademicoId = 0;
           if(rolValidado && !errorServidor){
             try{
              UsuarioUi usuarioUi = await datosrepository.saveDatosIniciales(await repository.getDatosInicioDocente(urlServidorLocal, usuarioId));
              await datosrepository.saveDatosAnioAcademico(await repository.getDatosAnioAcademico(urlServidorLocal, usuarioUi.empleadoId, usuarioUi.anioAcademicoIdSelected));
-
+             anioAcademicoId = usuarioUi.anioAcademicoIdSelected;
 
             }catch(e){
               errorServidor = true;
@@ -79,7 +79,7 @@ class Login extends UseCase<LoginResponse,LoginParams>{
 
           if(rolValidado && !errorServidor){
             try{
-              await datosrepository.updateUsuarioSuccessData(usuarioId);
+              await datosrepository.updateUsuarioSuccessData(usuarioId, anioAcademicoId);
             }catch(e){
               errorServidor = true;
             }
@@ -89,14 +89,6 @@ class Login extends UseCase<LoginResponse,LoginParams>{
             try{
               await datosrepository.destroyBaseDatos();
             }catch(e){
-            }
-          }
-
-          if(rolValidado && !errorServidor){//Guardar validacion de un success login
-            try{
-              await datosrepository.updateUsuarioSuccessData(usuarioId);
-            }catch(e){
-              errorServidor = true;
             }
           }
 
